@@ -8,8 +8,9 @@
 # só mira a raiz exata de cada site: httpdocs e parcerias.cogede.com.br são
 # irmãs de painel.cogede.com.br, que é do cogede-app e não é tocada.
 #
-# Secrets: VPS_HOST, VPS_USER, VPS_SSH_KEY_B64 (ou VPS_SSH_KEY) — os mesmos do
-# cogede-app, porque os três domínios são da mesma assinatura no Plesk.
+# Secrets: VPS_HOST, VPS_USER (o mesmo do cogede-app, porque os três domínios
+# são da mesma assinatura no Plesk) e VPS_SSH_KEY_B64 (ou VPS_SSH_KEY), uma
+# chave de deploy própria deste repositório. Detalhes no README.
 # Variável: DEPLOY_VPS = 'true' liga o deploy automático a cada push.
 #
 # "Run workflow" com "simular" marcado roda o rsync em --dry-run: lista o que

@@ -26,34 +26,36 @@ npm run build      # gera parcerias/dist/
 
 O workflow `.github/workflows/deploy.yml` publica pela branch `main`, só o site cuja pasta mudou (ou os dois pelo botão "Run workflow"). Envia por rsync/SSH e confere no fim se o domínio serve o conteúdo novo com certificado válido.
 
-Secrets (Settings › Secrets and variables › Actions), os mesmos do `cogede-app`:
+Secrets (Settings › Secrets and variables › Actions):
 
 - `VPS_HOST`: 185.215.180.60
-- `VPS_USER`: usuário de sistema da assinatura cogede.com.br no Plesk
+- `VPS_USER`: `cogede.com.br_3cv2huszng`, usuário de sistema da assinatura cogede.com.br no Plesk (o mesmo do painel)
 - `VPS_SSH_KEY_B64`: chave privada em base64 numa linha (ou `VPS_SSH_KEY` em texto)
 
-Variável `DEPLOY_VPS = true` liga o deploy automático a cada push. Sem ela, só pelo botão.
+A chave é própria deste repositório, separada da do `cogede-app`: ed25519 com comentário `github-actions-cogede-sites`, autorizada em `/var/www/vhosts/cogede.com.br/.ssh/authorized_keys`. A privada só existe no secret. Para trocar a chave, gere uma nova no servidor, ponha a pública no `authorized_keys`, grave a privada no secret (`base64 -w0` da privada piped em `gh secret set VPS_SSH_KEY_B64`), apague a privada do servidor e tire a linha antiga do `authorized_keys`.
+
+Variável `DEPLOY_VPS = true` (ligada desde 24/10/2026) faz o deploy automático a cada push. Sem ela, só pelo botão.
 
 No fim de cada deploy o workflow lê o `version.txt` (gravado com o commit) direto no VPS e depois pelo DNS público. Se o domínio servir outra coisa, o job falha.
 
-### Primeiro deploy
+### Backup e rollback
 
-1. Backup no servidor (SSH com o usuário da assinatura):
+Antes de uma mudança arriscada (como mexer nas exclusões do rsync), faça um backup e rode o workflow com **simular** marcado. O log do passo "Enviar" lista o que seria enviado e, nas linhas `*deleting`, o que seria apagado.
 
-   ```sh
-   cd /var/www/vhosts/cogede.com.br
-   tar czf ~/backup-sites-$(date +%F).tgz httpdocs parcerias.cogede.com.br
-   ```
+Backup no servidor (como root):
 
-2. Actions › Deploy dos sites › Run workflow, com **simular** marcado. O log do passo "Enviar" lista o que seria enviado e, nas linhas `*deleting`, o que seria apagado. Confira que nada de fora do site aparece ali.
-3. Rode de novo com **simular** desmarcado e abra os dois domínios no navegador.
-4. Só então crie a variável `DEPLOY_VPS = true`.
+```sh
+cd /var/www/vhosts/cogede.com.br
+tar czf /root/backup-cogede-sites-$(date +%F-%H%M).tgz httpdocs parcerias.cogede.com.br
+```
+
+O backup de antes do primeiro deploy pelo Actions é `/root/backup-cogede-sites-2026-10-24-1058.tgz`.
 
 Rollback: refaça o deploy de um commit anterior (revert na `main`) ou restaure o backup:
 
 ```sh
 cd /var/www/vhosts/cogede.com.br
-tar xzf ~/backup-sites-AAAA-MM-DD.tgz httpdocs      # ou parcerias.cogede.com.br
+tar xzf /root/backup-cogede-sites-AAAA-MM-DD-HHMM.tgz httpdocs      # ou parcerias.cogede.com.br
 ```
 
 ### Servidor
