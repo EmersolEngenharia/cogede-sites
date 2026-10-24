@@ -34,6 +34,28 @@ Secrets (Settings › Secrets and variables › Actions), os mesmos do `cogede-a
 
 Variável `DEPLOY_VPS = true` liga o deploy automático a cada push. Sem ela, só pelo botão.
 
+No fim de cada deploy o workflow lê o `version.txt` (gravado com o commit) direto no VPS e depois pelo DNS público. Se o domínio servir outra coisa, o job falha.
+
+### Primeiro deploy
+
+1. Backup no servidor (SSH com o usuário da assinatura):
+
+   ```sh
+   cd /var/www/vhosts/cogede.com.br
+   tar czf ~/backup-sites-$(date +%F).tgz httpdocs parcerias.cogede.com.br
+   ```
+
+2. Actions › Deploy dos sites › Run workflow, com **simular** marcado. O log do passo "Enviar" lista o que seria enviado e, nas linhas `*deleting`, o que seria apagado. Confira que nada de fora do site aparece ali.
+3. Rode de novo com **simular** desmarcado e abra os dois domínios no navegador.
+4. Só então crie a variável `DEPLOY_VPS = true`.
+
+Rollback: refaça o deploy de um commit anterior (revert na `main`) ou restaure o backup:
+
+```sh
+cd /var/www/vhosts/cogede.com.br
+tar xzf ~/backup-sites-AAAA-MM-DD.tgz httpdocs      # ou parcerias.cogede.com.br
+```
+
 ### Servidor
 
 - Certificados Let's Encrypt emitidos pelo Plesk, com redirecionamento 301 de HTTP para HTTPS.
