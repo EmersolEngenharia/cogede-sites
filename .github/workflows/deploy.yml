@@ -4,10 +4,16 @@
 #   parcerias/      -> parcerias.cogede.com.br   (Vite: build e envio de dist/)
 #
 # Push na main publica só o site cuja pasta mudou; "Run workflow" escolhe.
+# As pastas no servidor são fixas aqui (não vêm de secret) e o rsync --delete
+# só mira a raiz exata de cada site: httpdocs e parcerias.cogede.com.br são
+# irmãs de painel.cogede.com.br, que é do cogede-app e não é tocada.
 #
 # Secrets: VPS_HOST, VPS_USER, VPS_SSH_KEY_B64 (ou VPS_SSH_KEY) — os mesmos do
 # cogede-app, porque os três domínios são da mesma assinatura no Plesk.
 # Variável: DEPLOY_VPS = 'true' liga o deploy automático a cada push.
+#
+# "Run workflow" com "simular" marcado roda o rsync em --dry-run: lista o que
+# seria enviado e apagado no servidor, sem mudar nada. Use antes do 1º deploy.
 name: Deploy dos sites
 
 on:
@@ -23,6 +29,10 @@ on:
         type: choice
         options: [ambos, institucional, parcerias]
         default: ambos
+      simular:
+        description: 'Só simular (rsync --dry-run, não muda o servidor)'
+        type: boolean
+        default: true
 
 concurrency:
   group: deploy-sites
@@ -95,6 +105,14 @@ jobs:
         working-directory: parcerias
         run: npm ci && npm run build
 
+      # version.txt com o commit: é o que a conferência no fim procura no
+      # domínio, para não ficar verde servindo a versão antiga.
+      - name: Marcar versão
+        if: steps.pular.outputs.rodar == 'true'
+        run: |
+          origem=${{ matrix.site == 'parcerias' && 'parcerias/dist' || 'institucional' }}
+          echo "$GITHUB_SHA" > "$origem/version.txt"
+
       - name: Configurar chave SSH
         if: steps.pular.outputs.rodar == 'true'
         env:
@@ -117,21 +135,59 @@ jobs:
       # Let's Encrypt) e os arquivos do Plesk ficam. O index.html vai por último.
       - name: Enviar
         if: steps.pular.outputs.rodar == 'true'
+        env:
+          SIMULAR: ${{ github.event_name == 'workflow_dispatch' && inputs.simular }}
+          DESTINO_PATH: ${{ matrix.path }}
         run: |
+          case "$DESTINO_PATH" in
+            /var/www/vhosts/cogede.com.br/httpdocs|/var/www/vhosts/cogede.com.br/parcerias.cogede.com.br) ;;
+            *) echo "::error::Pasta de destino inesperada: $DESTINO_PATH"; exit 1 ;;
+          esac
           origem=${{ matrix.site == 'parcerias' && 'parcerias/dist' || 'institucional' }}
-          destino="${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ matrix.path }}/"
-          rsync -az --delete --exclude 'index.html' --exclude '.well-known' \
+          destino="${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:$DESTINO_PATH/"
+          seco=""
+          [ "$SIMULAR" = "true" ] && seco="--dry-run --itemize-changes" && echo "::notice::Simulação: nada muda no servidor."
+          rsync -az $seco --delete --exclude 'index.html' --exclude '.well-known' \
             --exclude '.php-ini' --exclude '.php-version' --exclude 'cgi-bin' \
             -e "ssh -i ~/.ssh/id_deploy" "$origem/" "$destino"
-          rsync -az -e "ssh -i ~/.ssh/id_deploy" "$origem/index.html" "$destino"
+          rsync -az $seco -e "ssh -i ~/.ssh/id_deploy" "$origem/index.html" "$destino"
 
-      - name: Conferir no ar
-        if: steps.pular.outputs.rodar == 'true'
+      # Duas conferências, lendo o version.txt servido:
+      #  1. direto no VPS (--resolve): os arquivos chegaram e o certificado vale;
+      #  2. pelo DNS público: é o que os visitantes recebem.
+      # O marcador confirma que a página é o site certo, não uma página do Plesk.
+      - name: Conferir se a versão nova está no ar
+        if: steps.pular.outputs.rodar == 'true' && !(github.event_name == 'workflow_dispatch' && inputs.simular)
+        env:
+          VPS_HOST: ${{ secrets.VPS_HOST }}
+          URL: ${{ matrix.url }}
+          MARCADOR: ${{ matrix.marcador }}
         run: |
+          host=$(echo "$URL" | sed -E 's#^https?://([^/]+).*#\1#')
+          versao() { curl -sS --max-time 20 "$@" "$URL/version.txt?v=$GITHUB_SHA" | head -c 40 || true; }
+
+          no_vps=$(versao --resolve "$host:443:$VPS_HOST")
+          if [ "$no_vps" != "$GITHUB_SHA" ]; then
+            echo "::error::O VPS não serve a versão nova em $host (veio '${no_vps:0:40}'), ou o certificado não vale. No Plesk: SSL/TLS Certificates > Let's Encrypt para $host."
+            exit 1
+          fi
+          if ! curl -sS --max-time 20 --resolve "$host:443:$VPS_HOST" "$URL/" | grep -q "$MARCADOR"; then
+            echo "::error::$URL no VPS não devolve a página do site (marcador '$MARCADOR' ausente)."
+            exit 1
+          fi
+          if [ "${{ matrix.site }}" = "parcerias" ] && ! curl -sS --max-time 20 --resolve "$host:443:$VPS_HOST" "$URL/rota-qualquer" | grep -q "$MARCADOR"; then
+            echo "::error::Rota da SPA sem fallback para o index.html (confira o .htaccess ou as diretivas do nginx no Plesk)."
+            exit 1
+          fi
+
           for t in 1 2 3 4 5 6; do
-            if curl -sS --max-time 20 "${{ matrix.url }}/?v=$GITHUB_SHA" | grep -q "${{ matrix.marcador }}"; then
-              echo "${{ matrix.url }} no ar com o conteúdo novo e certificado válido."; exit 0
-            fi
+            publico=$(versao)
+            [ "$publico" = "$GITHUB_SHA" ] && break
             sleep 10
           done
-          echo "::error::${{ matrix.url }} não serve o site (ou o certificado não é válido)."; exit 1
+          ip=$(getent ahostsv4 "$host" | awk 'NR==1{print $1}')
+          if [ "$publico" != "$GITHUB_SHA" ]; then
+            echo "::error::$host resolve para $ip e não serve a versão nova. Confira o registro A na GoDaddy: deve apontar para $VPS_HOST."
+            exit 1
+          fi
+          echo "$URL no ar com $GITHUB_SHA (DNS -> $ip)."
