@@ -1,0 +1,137 @@
+# Publica os sites públicos da COGEDE no VPS (Plesk, assinatura cogede.com.br).
+#
+#   institucional/  -> www.cogede.com.br         (HTML estático, sem build)
+#   parcerias/      -> parcerias.cogede.com.br   (Vite: build e envio de dist/)
+#
+# Push na main publica só o site cuja pasta mudou; "Run workflow" escolhe.
+#
+# Secrets: VPS_HOST, VPS_USER, VPS_SSH_KEY_B64 (ou VPS_SSH_KEY) — os mesmos do
+# cogede-app, porque os três domínios são da mesma assinatura no Plesk.
+# Variável: DEPLOY_VPS = 'true' liga o deploy automático a cada push.
+name: Deploy dos sites
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'institucional/**'
+      - 'parcerias/**'
+  workflow_dispatch:
+    inputs:
+      site:
+        description: 'Qual site publicar'
+        type: choice
+        options: [ambos, institucional, parcerias]
+        default: ambos
+
+concurrency:
+  group: deploy-sites
+  cancel-in-progress: true
+
+jobs:
+  escolha:
+    if: vars.DEPLOY_VPS == 'true' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    outputs:
+      institucional: ${{ steps.f.outputs.institucional }}
+      parcerias: ${{ steps.f.outputs.parcerias }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - id: f
+        env:
+          EVENTO: ${{ github.event_name }}
+          SITE: ${{ inputs.site }}
+          ANTES: ${{ github.event.before }}
+        run: |
+          if [ "$EVENTO" = "workflow_dispatch" ]; then
+            [ "$SITE" = "ambos" ] || [ "$SITE" = "institucional" ] && echo "institucional=true" >> "$GITHUB_OUTPUT"
+            [ "$SITE" = "ambos" ] || [ "$SITE" = "parcerias" ] && echo "parcerias=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if [ -z "$ANTES" ] || ! git cat-file -e "$ANTES^{commit}" 2>/dev/null; then
+            echo "institucional=true" >> "$GITHUB_OUTPUT"; echo "parcerias=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          mudou=$(git diff --name-only "$ANTES" "$GITHUB_SHA")
+          echo "$mudou" | grep -q '^institucional/' && echo "institucional=true" >> "$GITHUB_OUTPUT"
+          echo "$mudou" | grep -q '^parcerias/' && echo "parcerias=true" >> "$GITHUB_OUTPUT"
+          true
+
+  deploy:
+    needs: escolha
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - site: institucional
+            url: https://www.cogede.com.br
+            path: /var/www/vhosts/cogede.com.br/httpdocs
+            marcador: 'COGEDE - Cooperativa de Geração Distribuída Emersol'
+          - site: parcerias
+            url: https://parcerias.cogede.com.br
+            path: /var/www/vhosts/cogede.com.br/parcerias.cogede.com.br
+            marcador: 'Monetize sua Energia Solar'
+    steps:
+      - name: Pular se o site não mudou
+        id: pular
+        run: |
+          quer="${{ needs.escolha.outputs[matrix.site] }}"
+          [ "$quer" = "true" ] && echo "rodar=true" >> "$GITHUB_OUTPUT" || echo "Nada a publicar para ${{ matrix.site }}."
+
+      - uses: actions/checkout@v4
+        if: steps.pular.outputs.rodar == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.pular.outputs.rodar == 'true' && matrix.site == 'parcerias'
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: parcerias/package-lock.json
+
+      - name: Build
+        if: steps.pular.outputs.rodar == 'true' && matrix.site == 'parcerias'
+        working-directory: parcerias
+        run: npm ci && npm run build
+
+      - name: Configurar chave SSH
+        if: steps.pular.outputs.rodar == 'true'
+        env:
+          KEY_B64: ${{ secrets.VPS_SSH_KEY_B64 }}
+          KEY_TXT: ${{ secrets.VPS_SSH_KEY }}
+        run: |
+          mkdir -p ~/.ssh
+          if [ -n "$KEY_B64" ]; then
+            printf '%s' "$KEY_B64" | tr -d ' \n\r\t' | base64 -d > ~/.ssh/id_deploy
+          elif [ -n "$KEY_TXT" ]; then
+            printf '%s\n' "$KEY_TXT" | sed 's/\r$//' > ~/.ssh/id_deploy
+          else
+            echo "::error::Nenhum secret de chave (VPS_SSH_KEY_B64 ou VPS_SSH_KEY)."; exit 1
+          fi
+          chmod 600 ~/.ssh/id_deploy
+          ssh-keygen -y -f ~/.ssh/id_deploy > /dev/null || { echo "::error::Chave privada inválida."; exit 1; }
+          ssh-keyscan -H "${{ secrets.VPS_HOST }}" >> ~/.ssh/known_hosts 2>/dev/null
+
+      # --delete tira do servidor o que saiu do site; .well-known (validação do
+      # Let's Encrypt) e os arquivos do Plesk ficam. O index.html vai por último.
+      - name: Enviar
+        if: steps.pular.outputs.rodar == 'true'
+        run: |
+          origem=${{ matrix.site == 'parcerias' && 'parcerias/dist' || 'institucional' }}
+          destino="${{ secrets.VPS_USER }}@${{ secrets.VPS_HOST }}:${{ matrix.path }}/"
+          rsync -az --delete --exclude 'index.html' --exclude '.well-known' \
+            --exclude '.php-ini' --exclude '.php-version' --exclude 'cgi-bin' \
+            -e "ssh -i ~/.ssh/id_deploy" "$origem/" "$destino"
+          rsync -az -e "ssh -i ~/.ssh/id_deploy" "$origem/index.html" "$destino"
+
+      - name: Conferir no ar
+        if: steps.pular.outputs.rodar == 'true'
+        run: |
+          for t in 1 2 3 4 5 6; do
+            if curl -sS --max-time 20 "${{ matrix.url }}/?v=$GITHUB_SHA" | grep -q "${{ matrix.marcador }}"; then
+              echo "${{ matrix.url }} no ar com o conteúdo novo e certificado válido."; exit 0
+            fi
+            sleep 10
+          done
+          echo "::error::${{ matrix.url }} não serve o site (ou o certificado não é válido)."; exit 1

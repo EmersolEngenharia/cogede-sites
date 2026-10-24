@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>COGEDE - Cooperativa de Geração Distribuída Emersol</title>
+  <style>
+    body { margin: 0; font-family: 'Segoe UI', sans-serif; background: #f0f0f0; color: #333; }
+    nav { position: sticky; top: 0; background: #fff; display: flex; justify-content: space-between; align-items: center; padding: 1rem 2rem; box-shadow: 0 2px 4px rgba(0,0,0,0.1); z-index:1000; }
+    .logo img { height: 45px; }
+    .nav-links { list-style: none; display: flex; flex-wrap: wrap; gap: 1.5rem; margin: 0; }
+    .nav-links a { text-decoration: none; color: #2a5d32; font-weight: 600; }
+
+    /* Hero section without background image */
+    .hero { background: #e6f4ea; color: #2a5d32; text-align: center; padding: 6rem 1rem; }
+    .hero h1 { margin: 0 0 1rem; font-size: 2.8rem; line-height: 1.2; }
+    .hero p { font-size: 1.2rem; max-width: 600px; margin: 0 auto 2rem; line-height: 1.4; }
+    .hero .button { background: #28a745; color: #fff; padding: 0.9rem 1.8rem; border: none; border-radius: 4px; font-size: 1rem; text-decoration: none; cursor: pointer; }
+
+    section { padding: 4rem 1rem; max-width: 960px; margin: 0 auto; }
+    /* Sobre without background image */
+    #sobre { background: #fff; color: #333; }
+    section h2 { text-align: center; font-size: 2rem; color: #2a5d32; margin-bottom: 1rem; }
+    section p { text-align: center; font-size: 1rem; max-width: 800px; margin: 0 auto 2rem; line-height: 1.6; }
+
+    .card-container { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; }
+    .card { background: #fff; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); padding: 1.5rem; flex: 1 1 280px; display: flex; flex-direction: column; align-items: center; }
+    .card img { width: 60px; margin-bottom: 1rem; }
+    .card h3 { font-size: 1.1rem; color: #155724; margin-bottom: 0.5rem; text-align: center; }
+    .card p { font-size: 0.95rem; text-align: center; }
+
+    ol, ul { max-width: 700px; margin: 0 auto 2rem; padding-left: 1.5rem; font-size: 1rem; line-height: 1.6; }
+    ol li, ul li { margin-bottom: 0.5rem; }
+
+    #formulario { background: #fff; padding: 3rem 1rem; }
+    #formulario h2 { text-align: center; font-size: 2rem; color: #2a5d32; margin-bottom: 2rem; }
+    #formulario form { max-width: 500px; margin: 0 auto; display: grid; grid-template-columns: 1fr; gap: 1.2rem; }
+    #formulario label { font-weight: 600; font-size: 1rem; }
+    #formulario input, #formulario textarea { width: 100%; padding: 0.8rem; border: 1px solid #ccc; border-radius: 4px; font-size: 1rem; }
+    #formulario button { margin-top: 1rem; background: #28a745; color: #fff; padding: 0.9rem; border: none; border-radius: 4px; font-size: 1.1rem; cursor: pointer; }
+
+    footer { background: #2a5d32; color: #fff; text-align: center; padding: 2rem 1rem; font-size: 0.85rem; }
+    footer a { color: #fff; text-decoration: none; }
+
+    @media(max-width:768px) {
+      nav { flex-direction: column; gap: 1rem; padding: 1rem; }
+      .nav-links { flex-direction: column; gap: 0.8rem; }
+      .card-container { flex-direction: column; }
+      section { padding: 2rem 1rem; }
+    }
+  </style>
+</head>
+<body>
+  <nav>
+    <div class="logo"><img src="Logo COGEDE.png" alt="Logo COGEDE"></div>
+    <ul class="nav-links">
+      <li><a href="#sobre">Sobre</a></li>
+      <li><a href="#beneficios">Benefícios</a></li>
+      <li><a href="#como-funciona">Como Funciona</a></li>
+      <li><a href="#vantagens">Vantagens</a></li>
+      <li><a href="#parcerias">Parcerias</a></li>
+      <li><a href="#passos">Passos</a></li>
+      
+    </ul>
+  </nav>
+
+  <section class="hero" id="home">
+    <h1>COGEDE</h1>
+    <p>Reduza seus custos com energia elétrica de forma sustentável, sem investimentos próprios.</p>
+    <a href="https://api.whatsapp.com/send?phone=556492138729&text=Ol%C3%A1%2C%20gostaria%20de%20mais%20informa%C3%A7%C3%B5es" class="button">Contacte-nos via WhatsApp</a>
+  </section>
+
+  <section id="sobre">
+    <h2>Sobre</h2>
+    <p>A Cooperativa de Geração Distribuída Emersol (COGEDE) nasceu em 24 de outubro de 2022 em Itumbiara (GO) como iniciativa de Emerson Luiz de Miranda e de outras 19 pessoas que acreditaram na ideia. É uma associação voluntária de consumidores e geradores de energia elétrica que se uniram para reduzir custos e promover a sustentabilidade ambiental. Por meio do compartilhamento de créditos provenientes de usinas fotovoltaicas, nossos cooperados transformam excedentes de geração em economia real na conta de luz. A COGEDE democratiza o acesso à energia solar, oferecendo um modelo seguro e previsível de rentabilização da energia gerada.</p>
+  </section>
+
+  <section id="beneficios">
+    <h2>Benefícios</h2>
+    <div class="card-container">
+      <div class="card">
+        <img src="economia.png" alt="Economia de no mínimo 15%">
+        <h3>Economia de no mínimo 15%</h3>
+        <p>Desconto garantido em sua fatura, comparado ao valor cobrado pela concessionária, resultando em significativo alívio para o seu orçamento.</p>
+      </div>
+      <div class="card">
+        <img src="zero-investimento.png" alt="Zero investimento e sem obras">
+        <h3>Zero investimento e sem obras</h3>
+        <p>Você participa sem custos de aquisição de equipamentos ou serviços de instalação. Simplesmente assine o contrato e comece a economizar.</p>
+      </div>
+      <div class="card">
+        <img src="creditos.png" alt="Acesso a créditos de energia">
+        <h3>Acesso a créditos de energia</h3>
+        <p>Utilize a energia gerada por usinas solares alugadas pela COGEDE, sem precisar ter painéis no seu imóvel. Seus créditos são gerados e acumulados automaticamente.</p>
+      </div>
+      <div class="card">
+        <img src="congelado.png" alt="Preço congelado por 12 meses">
+        <h3>Preço congelado por 12 meses</h3>
+        <p>Proteja-se contra aumentos de tarifa. Seu custo por kWh permanece o mesmo durante um ano inteiro, trazendo previsibilidade financeira.</p>
+      </div>
+      <div class="card">
+        <img src="simplicidade.png" alt="Simplicidade operacional">
+        <h3>Simplicidade operacional</h3>
+        <p>Toda a gestão dos contratos, medições e aprovações junto à concessionária fica por conta da COGEDE, sem burocracia para você.</p>
+      </div>
+      <div class="card">
+        <img src="sustentabilidade.png" alt="Sustentabilidade e impacto social">
+        <h3>Sustentabilidade e impacto social</h3>
+        <p>Além de economizar, você apoia a expansão da energia limpa no país e fortalece a comunidade de geração distribuída.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="como-funciona">
+    <h2>Como Funciona a COGEDE</h2>
+    <ol>
+      <li>Adesão sem custos: Cadastre-se como cooperado e faça parte da solução, sem investimento inicial.</li>
+      <li>Créditos de energia: Alugamos usinas solares parceiras e negociamos tarifas até 15% mais baixas.</li>
+      <li>Desconto garantido: Economia mínima de 15% em relação à tarifa da concessionária.</li>
+      <li>Abate automático: Seus créditos descontam diretamente o consumo registrado na conta.</li>
+      <li>Transparência e segurança: Processos regulamentados pela ANEEL, sem burocracia para você.</li>
+    </ol>
+    <p>Junte-se à COGEDE e transforme energia limpa em economia real!</p>
+  </section>
+
+  <section id="vantagens">
+    <h2>Vantagens de se tornar cooperado</h2>
+    <ul>
+      <li>Economia de no mínimo 15%: Desconto garantido em sua fatura, comparado ao valor cobrado pela concessionária.</li>
+      <li>Zero investimento e sem obras: Sem custos de aquisição de equipamentos ou instalação.</li>
+      <li>Acesso a créditos de energia: Utilize créditos de usinas solares alugadas.</li>
+      <li>Preço congelado por 12 meses: Seu custo por kWh permanece fixo.</li>
+      <li>Simplicidade operacional: Gestão completa pela COGEDE, sem burocracia.</li>
+      <li>Sustentabilidade e impacto social: Apoie a energia limpa e a comunidade.</li>
+    </ul>
+  </section>
+
+  <section id="parcerias">
+    <h2>Oportunidade de Parceria</h2>
+    <p>Você possui uma usina fotovoltaica e quer transformar seu excedente em renda segura? A COGEDE aluga sua capacidade de geração e transfere créditos para os cooperados, remunerando pelo que injetar na rede.</p>
+    <ul>
+      <li>Para quem tem sistema próprio: Converta créditos não utilizados em pagamento mensal.</li>
+      <li>Sem burocracia: Gestão contratual e regulatória completa.</li>
+      <li>Conformidade legal: Tudo dentro da REN 482/2012.</li>
+    </ul>
+  </section>
+
+  <section id="passos">
+    <h2>Passos para se tornar cooperado</h2>
+    <ol>
+      <li>Envie sua documentação: Documentos pessoais e última fatura de energia.</li>
+      <li>Assine o contrato digitalmente.</li>
+      <li>Vincule sua conta: Integração com nossa rede de usinas.</li>
+      <li>Comece a economizar: Créditos entram em vigor em até 60 dias.</li>
+    </ol>
+  </section>
+
+  
+
+  <footer>
+    <p>COGEDE – Cooperativa de Geração Distribuída Emersol</p>
+    <p>Rua Leopoldo de Bulhões nº 1401, Sala 01, Setor Santos Dumont, Itumbiara – Goiás</p>
+    <p>Fundada em 24/10/2022 | Presidida por Emerson Luiz de Miranda | Filiada ao Sistema OCB/Goiás</p>
+    <p>© 2025 COGEDE - Todos os direitos reservados | <a href="https://www.emersol.ai" target="_blank">Emersol.Ai</a></p>
+  </footer>
+</body>
+</html>
